@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import grp
 from itertools import zip_longest as zip
 
 from django.shortcuts import render
@@ -20,20 +21,28 @@ def _parse_passwd():
 
     resp = []
     for line in f:
-        line_arr = line.split(':')
-        del line_arr[1]
-        line_arr[-1] = line_arr[-1].replace('\n', '')
+        vals = line.split(':')
+        del vals[1]
+        vals[-1] = vals[-1].replace('\n', '')
 
         user_entry = {}
-        if len(line_arr) < 6:
+        if len(vals) < 6:
             keys.remove('comment')
-            user_entry = zip(keys, line_arr)
+            user_entry = zip(keys, vals)
             user_entry['comment'] = ""
             keys.insert('comment', 3)
         else:
-            user_entry = zip(keys, line_arr)
+            user_entry = zip(keys, vals)
         resp.append(user_entry)
     return resp
+
+
+def _parse_grp_info(group_info):
+    grp_keys = ['name', 'gid', 'members']
+    grp_vals = list(group_info)
+    del grp_vals[1]
+
+    return dict(zip(grp_keys, grp_vals))
 
 
 def _get_users():
@@ -84,4 +93,14 @@ def uid(request):
         uid_val = request.path.split('/')[-1]
         if _get_by_uid().get(uid_val):
             return JsonResponse(_get_by_uid().get(uid_val))
+    return HttpResponse(status=404)
+
+
+def group_uid(request):
+    if request.method == "GET":
+        uid_val = request.path.split('/')[-2]
+        if _get_by_uid().get(uid_val):
+            user_val = _get_by_uid()[uid_val]
+            grp_info = grp.getgrgid(user_val['gid'])
+            return JsonResponse(_parse_grp_info(grp_info))
     return HttpResponse(status=404)
