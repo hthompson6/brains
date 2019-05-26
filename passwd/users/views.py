@@ -32,22 +32,42 @@ def _parse_passwd():
             keys.insert('comment', 3)
         else:
             user_entry = zip(keys, line_arr)
+        resp.append(user_entry)
+    return resp
+
+
+def _get_users():
+    resp = []
+    for user_entry in _parse_passwd():
         resp.append(dict(user_entry))
     return resp
 
 
+def _get_by_uid():
+    resp = {}
+    for user_entry in _parse_passwd():
+        temp_dict = dict(user_entry)
+        uid = temp_dict['uid']
+        del temp_dict['uid']
+
+        user_entry = {uid: temp_dict}
+        resp.update(user_entry)
+    return resp
+
+
 def index(request):
-    user_lst = _parse_passwd()
-    return JsonResponse(user_lst, safe=False)
+    if request.method == "GET":
+        return JsonResponse(_get_users(), safe=False)
+    return HttpResponse(status=404)
 
 
 def query(request):
     if request.method == "GET":
-        user_lst = _parse_passwd()
+        user_lst = _get_users()
         if len(request.GET) != 0:
             for k in request.GET.keys():
                 if k not in get_keys():
-                    return HttpResponse("Invalid Query Param")
+                    return HttpResponse(status=404)
                 cnt = 0
                 while cnt < len(user_lst):
                     if user_lst[cnt][k] != request.GET[k]:
@@ -56,4 +76,12 @@ def query(request):
                     cnt += 1 
 
         return JsonResponse(user_lst, safe=False)
-    return HttpResponse("")
+    return HttpResponse(status=404)
+
+
+def uid(request):
+    if request.method == "GET":
+        uid_val = request.path.split('/')[-1]
+        if _get_by_uid().get(uid_val):
+            return JsonResponse(_get_by_uid().get(uid_val))
+    return HttpResponse(status=404)
