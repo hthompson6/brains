@@ -1,4 +1,3 @@
-from collections import OrderedDict
 import grp
 from itertools import zip_longest as zip
 
@@ -55,11 +54,11 @@ def _get_users():
 def _get_by_uid():
     resp = {}
     for user_entry in _parse_passwd():
-        temp_dict = dict(user_entry)
-        uid = temp_dict['uid']
-        del temp_dict['uid']
+        temp = dict(user_entry)
+        uid = temp['uid']
+        del temp['uid']
 
-        user_entry = {uid: temp_dict}
+        user_entry = {uid: temp}
         resp.update(user_entry)
     return resp
 
@@ -92,7 +91,9 @@ def uid(request):
     if request.method == "GET":
         uid_val = request.path.split('/')[-1]
         if _get_by_uid().get(uid_val):
-            return JsonResponse(_get_by_uid().get(uid_val))
+            resp = _get_by_uid().get(uid_val)
+            resp['uid'] = uid_val
+            return JsonResponse(resp)
     return HttpResponse(status=404)
 
 
